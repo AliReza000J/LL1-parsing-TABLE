@@ -3,10 +3,10 @@
     var enumerableProducts = rules.ToList();
     var enumerableTerminals = terminals.ToList();
     var flag = false;
-    
+
     if (input == "#")
         return true;
-    
+
     if (enumerableTerminals.Contains(input))
         return false;
 
@@ -34,7 +34,7 @@
 IEnumerable<string> CalculateFirst(string input, IEnumerable<string> rules, IEnumerable<string> variableList,
     IEnumerable<string> terminalList, string startSymbol)
 {
-    
+
 
     var varEnumerable = variableList.ToList();
     var rulesEnumerable = rules.ToList();
@@ -48,40 +48,40 @@ IEnumerable<string> CalculateFirst(string input, IEnumerable<string> rules, IEnu
             first.Add(input);
             return first;
         case 1 when varEnumerable.Contains(input):
-        {
-            var product = rulesEnumerable.Where(x => x.StartsWith(input));
-            foreach (var p in product)
             {
-                var pr = p.Remove(0, 3);
-                first.AddRange(CalculateFirst(pr, rulesEnumerable, varEnumerable, terEnumerable, startSymbol));
-            }
+                var product = rulesEnumerable.Where(x => x.StartsWith(input));
+                foreach (var p in product)
+                {
+                    var pr = p.Remove(0, 3);
+                    first.AddRange(CalculateFirst(pr, rulesEnumerable, varEnumerable, terEnumerable, startSymbol));
+                }
 
-            return first;
-        }
+                return first;
+            }
         case > 1:
-        {
-            var isNullFlag = false;
-            foreach (var c in input)
             {
-                var list = CalculateFirst(c.ToString(), rulesEnumerable, varEnumerable, terEnumerable, startSymbol).ToList();
-                if (list.Contains("#"))
+                var isNullFlag = false;
+                foreach (var c in input)
                 {
-                    isNullFlag = true;
-                    list.Remove("#");
-                    first.AddRange(list);
+                    var list = CalculateFirst(c.ToString(), rulesEnumerable, varEnumerable, terEnumerable, startSymbol).ToList();
+                    if (list.Contains("#"))
+                    {
+                        isNullFlag = true;
+                        list.Remove("#");
+                        first.AddRange(list);
+                    }
+                    else
+                    {
+                        isNullFlag = false;
+                        first.AddRange(list);
+                        break;
+                    }
                 }
-                else
-                {
-                    isNullFlag = false;
-                    first.AddRange(list);
-                    break;
-                }
-            }
 
-            if (isNullFlag)
-                first.Add("#");
-            break;
-        }
+                if (isNullFlag)
+                    first.Add("#");
+                break;
+            }
     }
 
     return first;
@@ -183,7 +183,7 @@ string[,] ParseTable(IEnumerable<string> rules, ICollection<string> variableList
     {
         var productIndex = productsNumber.First(x => x.Key == product).Value;
         if (product[3..4].Contains('#'))
-            tempList.AddRange(CalculateFollow( product[..1], enumerable, variableList, terminals, startSymbol));
+            tempList.AddRange(CalculateFollow(product[..1], enumerable, variableList, terminals, startSymbol));
         else
         {
             tempList.AddRange(CalculateFirst(product[3..], enumerable, variableList, terminals, startSymbol));
@@ -251,7 +251,7 @@ bool IsLl1(IEnumerable<string> rules, IEnumerable<string> variableList, IEnumera
             if (first.Intersect(follow).ToList().Count <= 0) continue;
             return false;
         }
-        
+
         var list = rulesEnumerable.Where(x => x.StartsWith(variable)).ToList();
         if (list.Count >= 2)
         {
@@ -272,9 +272,70 @@ bool IsLl1(IEnumerable<string> rules, IEnumerable<string> variableList, IEnumera
     return true;
 }
 
-void Parser(string str, string[,] parseTable)
+int FindIndexR(string[,] table, string member)
 {
+    for (var i = 0; i < table.GetLength(0); i++)
+    {
+        if (member == table[i, 0])
+            return i;
+    }
+    return -1;
+}
+
+int FindIndexC(string[,] table, string member)
+{
+    for (var i = 0; i < table.GetLength(1); i++)
+    {
+        if (member == table[0, i])
+            return i;
+    }
+    return -1;
+}
+
+void Parser(string str, string[,] parseTable, string startSymbol, IEnumerable<string> rules, IEnumerable<string> variableList, IEnumerable<string> terminalList)
+{
+    var len = str.Length;
+    str = str + "$";
     var stack = new Stack<string>();
+    stack.Push("$");
+    stack.Push(startSymbol);
+    var enumerable = rules.ToList();
+    var j = 0;
+    while (len > 0)
+    {
+        var top = stack.Pop();
+        var i = terminalList.Contains(top) ? FindIndexC(parseTable, top) : FindIndexR(parseTable, top);
+        j = FindIndexC(parseTable, str[0].ToString());
+
+        var num = parseTable[i, j];
+        if (num is null)
+            throw new Exception("can't parse your input!!".ToUpper());
+        
+        var p = enumerable[int.Parse(num)-1];
+        for (var k = p.Length-1; k >=3; k--)
+        {
+            if (p[k].ToString()!="#") 
+                stack.Push(p[k].ToString());
+        }
+
+        top = stack.Pop();
+        if (top == str[0].ToString())
+            str = str.Remove(0, 1);
+        else
+        {
+            stack.Push(top);
+        }
+        len = str.Length - 1;
+    }
+
+    if (str == "$")
+    {
+        Console.WriteLine("yes");
+    }
+    else
+    {
+        Console.WriteLine("no");
+    }
 
 }
 ////////////////////////////////////////////////////////////////////////////////////
@@ -290,9 +351,9 @@ var grammarProducts = input.Split(",");
 var variables = grammarProducts.Select(s => s[..1]).Distinct().ToList();
 
 var terminals = (from s in grammarProducts
-    from t in s[3..]
-    where !variables.Contains(t.ToString())
-    select t.ToString()).Distinct().ToList();
+                 from t in s[3..]
+                 where !variables.Contains(t.ToString())
+                 select t.ToString()).Distinct().ToList();
 
 terminals.Remove("#");
 
@@ -304,5 +365,7 @@ PrintTable(p);
 Console.WriteLine("-----------------------------------------------");
 for (var i = 1; i <= grammarProducts.Length; i++)
 {
-    Console.WriteLine($"{i}){grammarProducts[i-1]}");
+    Console.WriteLine($"{i}){grammarProducts[i - 1]}");
 }
+var str = Console.ReadLine();
+Parser(str, p, startSymbol, grammarProducts,variables, terminals);

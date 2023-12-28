@@ -300,27 +300,45 @@ void Parser(string str, string[,] parseTable, string startSymbol, IEnumerable<st
     stack.Push("$");
     stack.Push(startSymbol);
     var enumerable = rules.ToList();
-    var j = 0;
+
+    foreach (var element in stack)
+    {
+        Console.Write(element);
+    }
+    Console.Write($"\t\t\t{str}\n");
+
+
     while (len > 0)
     {
         var top = stack.Pop();
         var i = terminalList.Contains(top) ? FindIndexC(parseTable, top) : FindIndexR(parseTable, top);
-        j = FindIndexC(parseTable, str[0].ToString());
+        var j = FindIndexC(parseTable, str[0].ToString());
 
-        var num = parseTable[i, j];
-        if (num is null)
-            throw new Exception("can't parse your input!!".ToUpper());
-        
+        var num = parseTable[i, j] ?? throw new Exception("can't parse your input!!".ToUpper());
+
         var p = enumerable[int.Parse(num)-1];
         for (var k = p.Length-1; k >=3; k--)
         {
-            if (p[k].ToString()!="#") 
+            if (p[k].ToString() != "#")
+            {
                 stack.Push(p[k].ToString());
+            }
         }
-
+        foreach (var element in stack)
+        {
+            Console.Write(element);
+        }
+        Console.Write($"\t\t\t{str}\n");
         top = stack.Pop();
         if (top == str[0].ToString())
+        {
             str = str.Remove(0, 1);
+            foreach (var element in stack)
+            {
+                Console.Write(element);
+            }
+            Console.Write($"\t\t\t{str}\n");
+        }
         else
         {
             stack.Push(top);
@@ -330,7 +348,9 @@ void Parser(string str, string[,] parseTable, string startSymbol, IEnumerable<st
 
     if (str == "$")
     {
-        Console.WriteLine("yes");
+        Console.Write(str+"\t\t\t"+str+"\n");
+        Console.WriteLine("-----------------------------------------------");
+        Console.WriteLine("your input is valid!!!");
     }
     else
     {
@@ -367,5 +387,6 @@ for (var i = 1; i <= grammarProducts.Length; i++)
 {
     Console.WriteLine($"{i}){grammarProducts[i - 1]}");
 }
+Console.WriteLine("-----------------------------------------------");
 var str = Console.ReadLine();
 Parser(str, p, startSymbol, grammarProducts,variables, terminals);

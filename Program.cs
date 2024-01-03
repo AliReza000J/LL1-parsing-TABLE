@@ -124,8 +124,8 @@ IEnumerable<string> CalculateFollow(string input, IEnumerable<string> rules, ICo
 }
 string[,] ParseTable(IEnumerable<string> rules, ICollection<string> variableList, ICollection<string> terminals, string startSymbol)
 {
-    if (!IsLl1(rules, variableList, terminals, startSymbol))
-        throw new Exception("This Grammar is not LL1!!!!");
+    //if (!IsLl1(rules, variableList, terminals, startSymbol))
+    //    throw new Exception("This Grammar is not LL1!!!!");
 
     var enumerable = rules.ToList();
     var f = false;
@@ -223,54 +223,55 @@ static void PrintTable(string[,] parseTable)
     Console.ForegroundColor = ConsoleColor.White;
 }
 
-bool IsLl1(IEnumerable<string> rules, IEnumerable<string> variableList, IEnumerable<string> terminalList, string startSymbol)
-{
-    var rulesEnumerable = rules.ToList();
-    var varsEnumerable = variableList.ToList();
-    var terminalsEnumerable = terminalList.ToList();
-    var firstList = new List<string>();
+//bool IsLl1(IEnumerable<string> rules, IEnumerable<string> variableList, IEnumerable<string> terminalList, string startSymbol)
+//{
+//    var rulesEnumerable = rules.ToList();
+//    var varsEnumerable = variableList.ToList();
+//    var terminalsEnumerable = terminalList.ToList();
+//    var firstList = new List<string>();
 
 
-    if (varsEnumerable.Select(item => rulesEnumerable.Any(x => x.StartsWith(item) && x[3..4] == item)).Any(b => b))
-    {
-        return false;
-    }
+//    if (varsEnumerable.Select(item => rulesEnumerable.Any(x => x.StartsWith(item) && x[3..4] == item)).Any(b => b))
+//    {
+//        return false;
+//    }
 
-    if (varsEnumerable.Select(x => rulesEnumerable.Any(y => y.StartsWith(x) && rulesEnumerable.Any(z => z[3..4] == x && z.StartsWith(y[3..4]))))
-        .Any(b => b))
-    {
-        return false;
-    }
+//    if (varsEnumerable.Select(x => rulesEnumerable.Any(y => y.StartsWith(x) && rulesEnumerable.Any(z => z[3..4] == x && z.StartsWith(y[3..4]))))
+//        .Any(b => b))
+//    {
+//        return false;
+//    }
 
-    foreach (var variable in varsEnumerable)
-    {
-        if (IsNullable(rulesEnumerable, variable, terminalsEnumerable))
-        {
-            var first = CalculateFirst(variable, rulesEnumerable, varsEnumerable, terminalsEnumerable, startSymbol);
-            var follow = CalculateFollow(variable, rulesEnumerable, varsEnumerable, terminalsEnumerable, startSymbol);
-            if (first.Intersect(follow).ToList().Count <= 0) continue;
-            return false;
-        }
+//    foreach (var variable in varsEnumerable)
+//    {
+//        if (IsNullable(rulesEnumerable, variable, terminalsEnumerable))
+//        {
+//            var first = CalculateFirst(variable, rulesEnumerable, varsEnumerable, terminalsEnumerable, startSymbol);
+//            var follow = CalculateFollow(variable, rulesEnumerable, varsEnumerable, terminalsEnumerable, startSymbol);
+//            if (first.Intersect(follow).ToList().Count <= 0) continue;
+//            return false;
+//        }
 
-        var list = rulesEnumerable.Where(x => x.StartsWith(variable)).ToList();
-        if (list.Count >= 2)
-        {
-            foreach (var rule in list)
-            {
-                firstList.AddRange(CalculateFirst(rule[3..], rules, variableList, terminalList, startSymbol));
-            }
+//        var list = rulesEnumerable.Where(x => x.StartsWith(variable)).ToList();
+//        if (list.Count >= 2)
+//        {
+//            foreach (var rule in list)
+//            {
+//                firstList.AddRange(CalculateFirst(rule[3..], rules, variableList, terminalList, startSymbol));
+//            }
 
-            foreach (var t in firstList)
-            {
-                var tList = firstList.Where(x => x == t).ToList();
-                if (tList.Count >= 2)
-                    return false;
-            }
-        }
-    }
+//            foreach (var t in firstList)
+//            {
+//                var tList = firstList.Where(x => x == t).ToList();
+//                if (tList.Count >= 2)
+//                    return false;
+//            }
+//        }
+//        firstList.Clear();
+//    }
 
-    return true;
-}
+//    return true;
+//}
 
 int FindIndexR(string[,] table, string member)
 {
@@ -292,72 +293,67 @@ int FindIndexC(string[,] table, string member)
     return -1;
 }
 
-void Parser(string str, string[,] parseTable, string startSymbol, IEnumerable<string> rules, IEnumerable<string> variableList, IEnumerable<string> terminalList)
+void Parser(string str, string[,] parseTable, string startSymbol, IEnumerable<string> rules,
+    IEnumerable<string> variableList, IEnumerable<string> terminalList)
 {
-    var len = str.Length;
-    str = str + "$";
-    var stack = new Stack<string>();
-    stack.Push("$");
-    stack.Push(startSymbol);
-    var enumerable = rules.ToList();
+    var lStack = new Stack<string>();
+    var rStack = new Stack<string>();
 
-    foreach (var element in stack)
+    lStack.Push("$");
+    lStack.Push(startSymbol);
+
+    str += "$";
+
+    for (var i = str.Length; i >= 1; i--)
+        rStack.Push(str[i - 1].ToString());
+
+    while (lStack.Count != 1)
     {
-        Console.Write(element);
-    }
-    Console.Write($"\t\t\t{str}\n");
-
-
-    while (len > 0)
-    {
-        var top = stack.Pop();
-        var i = terminalList.Contains(top) ? FindIndexC(parseTable, top) : FindIndexR(parseTable, top);
-        var j = FindIndexC(parseTable, str[0].ToString());
-
-        var num = parseTable[i, j] ?? throw new Exception("can't parse your input!!".ToUpper());
-
-        var p = enumerable[int.Parse(num)-1];
-        for (var k = p.Length-1; k >=3; k--)
+        foreach (var item in lStack)
         {
-            if (p[k].ToString() != "#")
-            {
-                stack.Push(p[k].ToString());
-            }
+            Console.Write(item);
         }
-        foreach (var element in stack)
+
+        Console.Write("\t\t\t");
+
+        foreach (var item in rStack)
         {
-            Console.Write(element);
+            Console.Write(item);
         }
-        Console.Write($"\t\t\t{str}\n");
-        top = stack.Pop();
-        if (top == str[0].ToString())
+
+        var s = lStack.Pop();
+        var t = rStack.Pop();
+        if (s == t)
         {
-            str = str.Remove(0, 1);
-            foreach (var element in stack)
+            Console.Write("\n");
+            continue;
+        }
+        if (variableList.Contains(s))
+        {
+            rStack.Push(t);
+            var i = FindIndexR(parseTable, s);
+            var j = FindIndexC(parseTable, t);
+
+            var num = parseTable[i, j] ?? throw new Exception("can't parse your input!!".ToUpper());
+
+            Console.Write($"\t\t\t({num})\n");
+
+            var enumerable = rules.ToList();
+            var p = enumerable[int.Parse(num) - 1];
+            for (var k = p.Length - 1; k >= 3; k--)
             {
-                Console.Write(element);
+                if (p[k].ToString()!="#")
+                    lStack.Push(p[k].ToString());
             }
-            Console.Write($"\t\t\t{str}\n");
         }
         else
         {
-            stack.Push(top);
+            throw new Exception("can't parse your input!!".ToUpper());
         }
-        len = str.Length - 1;
     }
 
-    if (str == "$")
-    {
-        Console.Write(str+"\t\t\t"+str+"\n");
-        Console.WriteLine("-----------------------------------------------");
-        Console.WriteLine("your input is valid!!!");
-    }
-    else
-    {
-        Console.WriteLine("no");
-    }
-
-}
+    Console.WriteLine(Equals(lStack.Pop(), rStack.Pop()) ? "accepted!" : "rejected!");
+}   
 ////////////////////////////////////////////////////////////////////////////////////
 
 Console.WriteLine("Write your grammar (A->a,B->b...): ");
@@ -389,4 +385,5 @@ for (var i = 1; i <= grammarProducts.Length; i++)
 }
 Console.WriteLine("-----------------------------------------------");
 var str = Console.ReadLine();
-Parser(str, p, startSymbol, grammarProducts,variables, terminals);
+Parser(str, p, startSymbol, grammarProducts, variables, terminals);
+Console.WriteLine("-----------------------------------------------");
